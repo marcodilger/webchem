@@ -51,6 +51,7 @@ PPDB | `ppdb_parse()` (only parsing) | none | none
 [ChemIDplus](http://chem.sis.nlm.nih.gov/chemidplus/) | `ci_query()` | none | none
 [Wikidata](https://www.wikidata.org/wiki/Wikidata:WikiProject_Chemistry) | `get_wdid()`, `wd_ident()` | [link](https://www.mediawiki.org/wiki/API:Main_page) | none
 [OPSIN](http://opsin.ch.cam.ac.uk/instructions.html) | `opsin_query()` | [link](http://opsin.ch.cam.ac.uk/instructions.html) | none
+[Drugbank](http://www.drugbank.ca/) | `get_dbid()` | none | none
 
 Moreover, there are some functions to check indentifiers: `is.inchikey()`, `is.cas()` and `is.smiles()`.
 
@@ -294,6 +295,13 @@ wd_ident(ids$id)[1:5]
 opsin_query(c('Cyclopropane', 'Octane'))
 ```
 
+#### Drugbank
+
+```{r dbid}
+dbid <- get_dbid(c('Triclosan', 'Glyphosate'))
+dbid
+```
+
 
 #### Extractor functions
 
@@ -309,7 +317,6 @@ smiles(wi)
 
 smiles(etox_basic(5564))
 ```
-
 
 
 #### Misc functions
