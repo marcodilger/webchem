@@ -51,6 +51,7 @@ PPDB | `ppdb_parse()` (only parsing) | none | none
 [ChemIDplus](http://chem.sis.nlm.nih.gov/chemidplus/) | `ci_query()` | none | none
 [Wikidata](https://www.wikidata.org/wiki/Wikidata:WikiProject_Chemistry) | `get_wdid()`, `wd_ident()` | [link](https://www.mediawiki.org/wiki/API:Main_page) | none
 [OPSIN](http://opsin.ch.cam.ac.uk/instructions.html) | `opsin_query()` | [link](http://opsin.ch.cam.ac.uk/instructions.html) | none
+[EnviChem](http://www.ymparisto.fi/en-US/Maps_and_statistics/Data_systems/Data_bank_of_Environmental_Properties_of%2830591%29) | `ec_query()` | nonen | none
 
 Moreover, there are some functions to check indentifiers: `is.inchikey()`, `is.cas()` and `is.smiles()`.
 
@@ -294,6 +295,12 @@ wd_ident(ids$id)[1:5]
 opsin_query(c('Cyclopropane', 'Octane'))
 ```
 
+
+#### EnviChem
+```{r opsin}
+ec <- ec_query('50-00-0', 'cas')
+ec[[1]]$name
+```
 
 #### Extractor functions
 
