@@ -1,4 +1,7 @@
 library(httr)
+library(jsonlite)
+library(tidyverse) #to avoid
+library(xml2)
 
 example_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/712/property/CanonicalSMILES/JSON/" # construction already handled by webchem
 classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/712/classification/JSON?classification_type=original"
@@ -8,7 +11,7 @@ cont <- try(content(POST(classification_query
             silent = TRUE
 )
 
-# this generates a > 9 mb object -> not feasible
+# this generates a > 9 mb object for formaldehyde -> not feasible
 
 # should be feasible using PUG-VIEW, which can access
 # all headings listed here:
@@ -17,78 +20,71 @@ cont <- try(content(POST(classification_query
 # via e.g. https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/2244/JSON?heading=UN+GHS+Classification
 # to check
 
+classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/2244/JSON?heading=GHS+Classification"
+
+cont <- try(content(POST(classification_query),
+                    type = 'text', encoding = 'UTF-8'),
+            silent = TRUE
+)
+
+
+ghs <- fromJSON(cont)
+ghs_layer2 <- ghs$Record$Section
+
+ghs_layer3 <- ghs_layer2[[3]][[1]]
+
+ghs_layer4 <- ghs_layer3[[3]][[1]]
+
+ghs_layer5 <- ghs_layer4$Information
+
+ghs_layer6 <- ghs_layer5[[1]] # this contains for each available reference the pictograms, signal words, hazard statements etc.
+
+# getting directly to this layer
+
+ghs_layer6 <- ghs$Record$Section[[3]][[1]][[3]][[1]]$Information[[1]]
+ # alternative like: ghs$Record$Section['Section']['Section']['Section']['Section']$Section
+# this layer defines sources (coded) & types of the information ( pictograms, hazard statements...etcs)
+
+ghs_layer6['Name' == "GHS Hazard Statement", 3]
+
+str(list(ghs_layer6))
+
+ghs_layer7 <- ghs_layer6$Value$StringWithMarkup
+
+ghs_layer7
+# goal a list with a list element for each reference
 
 
 
 
-
-# old stuff as template for testing
-
+enframe(unlist(cont))
 
 
-pc_prop <- function(cid, properties = NULL, verbose = TRUE, ...){
-  # cid <- c('5564', '7843')
-  napos <- which(is.na(cid))
-  cid_o <- cid
-  cid <- cid[!is.na(cid)]
-  prolog <- 'https://pubchem.ncbi.nlm.nih.gov/rest/pug'
-  input <- '/compound/cid'
-  if (is.null(properties))
-    properties <- c('MolecularFormula', 'MolecularWeight', 'CanonicalSMILES',
-                  'IsomericSMILES', 'InChI', 'InChIKey', 'IUPACName',
-                  'XLogP', 'ExactMass', 'MonoisotopicMass', 'TPSA',
-                  'Complexity', 'Charge', 'HBondDonorCount', 'HBondAcceptorCount',
-                  'RotatableBondCount', 'HeavyAtomCount', 'IsotopeAtomCount',
-                  'AtomStereoCount', 'DefinedAtomStereoCount', 'UndefinedAtomStereoCount',
-                  'BondStereoCount', 'DefinedBondStereoCount', 'UndefinedBondStereoCount',
-                  'CovalentUnitCount', 'Volume3D', 'XStericQuadrupole3D',
-                  'YStericQuadrupole3D', 'ZStericQuadrupole3D', 'FeatureCount3D',
-                  'FeatureAcceptorCount3D', 'FeatureDonorCount3D', 'FeatureAnionCount3D',
-                  'FeatureCationCount3D', 'FeatureRingCount3D', 'FeatureHydrophobeCount3D',
-                  'ConformerModelRMSD3D', 'EffectiveRotorCount3D', 'ConformerCount3D',
-                  'Fingerprint2D')
-  properties <- paste(properties, collapse = ',')
-  output <- paste0('/property/', properties, '/JSON')
 
-  qurl <- paste0(prolog, input, output)
-  if (verbose)
-    message(qurl)
-  Sys.sleep(0.2)
-  cont <- try(content(POST(qurl,
-                           body = list("cid" = paste(cid, collapse = ',')
-                                       )),
-                      type = 'text', encoding = 'UTF-8'),
-              silent = TRUE
-  )
-  if (inherits(cont, "try-error")) {
-    warning('Problem with web service encountered... Returning NA.')
-    return(NA)
-  }
-  cont <- fromJSON(cont)
-  if (names(cont) == 'Fault') {
-    warning(cont$Fault$Message, '. ', cont$Fault$Details, '. Returning NA.')
-    return(NA)
-  }
-  out <- cont$PropertyTable[[1]]
-  # insert NA rows
-  narow <- rep(NA, ncol(out))
-  for (i in seq_along(napos)) {
-    #capture NAs at beginning
-    firstnna <- min(which(!is.na(cid_o)))
-    if (napos[i] <  firstnna) {
-      out <- rbind(narow, out)
-    } else {
-      # capture NAs at end
-      if (napos[i] > nrow(out)) {
-        # print(napos[i])
-        out <- rbind(out, narow)
-      } else {
-        out <- rbind(out[1:(napos[i] - 1), ], narow, out[napos[i]:nrow(out), ])
-      }
-    }}
-  rownames(out) <- NULL
-  class(out) <- c('pc_prop','data.frame')
-  return(out)
-}
+# highly relevant
+# https://stackoverflow.com/questions/32634430/r-parse-json-xml-exported-compound-properties-from-pubchem
 
 
+# try with xml response
+
+classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/2244/XML?heading=GHS+Classification"
+
+cont <- try(content(POST(classification_query),
+                    type = 'text', encoding = 'UTF-8'),
+            silent = TRUE
+)
+
+# looks much!! easier accessible vi xpaths
+
+ghs_xml <- read_xml(cont)
+
+xml_children(ghs_xml)
+# of interest are all 
+# <StringWithMarkup>
+# within <Information> Tags that have a 
+# <Name>GHS Hazard Statements</Name>
+
+xml_find_all(ghs_xml, "./*")
+xml_find_all(ghs_xml, xpath = "./StringWithMarkup")
+
+# need to brush up xpath
