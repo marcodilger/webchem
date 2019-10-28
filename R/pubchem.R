@@ -1,4 +1,4 @@
-#' Retrieve Pubchem Id (CID)
+  #' Retrieve Pubchem Id (CID)
 #'
 #' Return CompoundID (CID) for a search query using PUG-REST,
 #' see \url{https://pubchem.ncbi.nlm.nih.gov/}.
@@ -50,7 +50,7 @@ get_cid <- function(query, from = 'name', first = FALSE, verbose = TRUE, arg = N
     qurl <- paste0(prolog, input, output, arg)
     if (verbose)
       message(qurl)
-    Sys.sleep(0.2)
+    Sys.sleep(0.2) # pubchem asks to limit requests to 5/sec
     cont <- try(content(POST(qurl,
                              body = paste0(from, '=', query)
                              ), type = 'text', encoding = 'UTF-8'),
