@@ -16,12 +16,9 @@ library(stringr)
 # )
 #
 # saveRDS(cont, "data/content_ghs_temp.rda")
-readRDS("data/content_ghs_temp.rda")
+cont <- readRDS("data/content_ghs_temp.rda")
 
-ghs_xml <- read_xml(cont)
-
-ghs_xml <- xml_ns_strip(ghs_xml)
-xml_children(ghs_xml)
+ghs_xml <- xml_ns_strip(read_xml(cont))
 
 # of interest are all
 # <StringWithMarkup>
@@ -46,41 +43,121 @@ for (ref in ghs_refs) {
 
 
 # build response list for each reference
-
-response <-  list()
+ref <- 11
+out <-  list()
 for(ref in ghs_refs) {
 
-source <- xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]"))
-source_name <- xml_text(xml_find_all(source, xpath = "SourceName"))
-source_substancename <- xml_text(xml_find_all(source, xpath = "Name"))
-source_description <- xml_text(xml_find_all(source, xpath = "Description"))
-source_url <- xml_text(xml_find_all(source, xpath = "URL"))
-source_license <- xml_text(xml_find_all(source, xpath = "LicenseNote"))
+  source <- xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]"))
+  source_name <- xml_text(xml_find_all(source, xpath = "SourceName"))
+  source_substancename <- xml_text(xml_find_all(source, xpath = "Name"))
+  source_description <- xml_text(xml_find_all(source, xpath = "Description"))
+  source_url <- xml_text(xml_find_all(source, xpath = "URL"))
 
-hazard_statements <- xml_text(xml_find_all(ghs_xml,
-                      xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String")
-                      )
-         )
-hazard_statements <- hazard_statements[hazard_statements != ""]
-hazard_codes <- str_extract(hazard_statements, "^H\\d{3}(\\+H\\d{3})*") # needs to be improved to capture minimum classification and subclasses as well, see https://en.wikipedia.org/wiki/GHS_hazard_statements
-hazard_codes <- sort(unique(hazard_codes[hazard_codes != ""]))
+  # at least the ECHA source requires the license note to be transported
+  source_license <- xml_text(xml_find_all(source, xpath = "LicenseNote"))
 
-prec_codes <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'Precautionary Statement Codes')]//StringWithMarkup/String") ))
-prec_codes <- prec_codes[str_detect(prec_codes, "^P\\d{3}")]
-prec_codes <- unlist(str_extract_all(prec_codes, "P\\d{3}(\\+P\\d{3})*"))
+  hazard_statements <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String")))
+  hazard_statements <- hazard_statements[hazard_statements != ""]
+  hazard_codes <- str_extract(hazard_statements, "^H\\d{3}(\\s?\\*|[A-z]{0,2})(\\+H\\d{3}[A-z]{0,2})*")
+  hazard_codes <- sort(unique(hazard_codes[hazard_codes != ""]))
+
+  prec_codes <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'Precautionary Statement Codes')]//StringWithMarkup/String") ))
+  prec_codes <- unlist(str_extract_all(prec_codes, "P\\d{3}(\\+P\\d{3})*"))
+
+  # build output list(s)
+
+  out[[length(response) + 1]] <-  list(
+    source_name = source_name,
+    substance = source_substancename,
+    hazard_codes = hazard_codes,
+    hazard_statements = hazard_statements,
+    precautionary_statement_codes = prec_codes,
+    source_desc = source_description,
+    url = source_url,
+    license = source_license)
 
 
-info <- list(source_name = source_name, substance = source_substancename, codes = hazard_codes, hazard_statements = hazard_statements, precautionary_statement_codes = prec_codes, source_desc = source_description, url = source_url, license = source_license)
-
-response[[length(response) + 1]] <-  info # ansprechen via info$name ist KEINE gute Idee (z.B. ECHA doppelte beiträge möglich)
 }
 
 
-response[2]
+out[1]
 
 
 
+##### bring to function
 
+# temp
+cid <- 6341
+verbose = TRUE
+
+# ToDo roxygen documentation
+
+pc_ghs <- function(cid, sources = "all", verbose = TRUE){
+  # cid: for now only a single cid, ToDo: implementation of multiple cid like in other pc_ functions
+  # sources: for now only "all", which returns a list of lists from all available sources containing GHS information
+
+  prolog <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/"
+  input <- paste0("compound/", cid,"/")
+  output <- "XML?heading=GHS+Classification"
+
+  qurl <- paste0(prolog, input, output)
+  if (verbose)
+    message(qurl)
+  Sys.sleep(0.2) # pubchem asks to limit requests to 5/sec
+
+  cont <- try(content(POST(qurl),
+                      type = 'text', encoding = 'UTF-8'),
+              silent = TRUE
+  )
+  if (inherits(cont, "try-error")) {
+    warning('Problem with web service encountered... Returning NA.')
+    return(NA)
+  }
+  # ToDo: fault handling
+
+  # extract relevant xml
+  ghs_xml <- xml_ns_strip(read_xml(cont))
+
+
+  # extract all available references containing GHS hazard statements
+  # returned reference ID are not consistent accross substance, reference ID is not suitable as identifier of sources
+  ghs_refs <- xml_text(xml_find_all(ghs_xml, xpath = "//Information[Name][contains(., 'GHS Hazard Statements')]//ReferenceNumber"))
+
+  out <-  list()
+  for(ref in ghs_refs) {
+
+    source <- xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]"))
+    source_name <- xml_text(xml_find_all(source, xpath = "SourceName"))
+    source_substancename <- xml_text(xml_find_all(source, xpath = "Name"))
+    source_description <- xml_text(xml_find_all(source, xpath = "Description"))
+    source_url <- xml_text(xml_find_all(source, xpath = "URL"))
+
+    # at least the ECHA source requires the license note to be transported
+    source_license <- xml_text(xml_find_all(source, xpath = "LicenseNote"))
+
+    hazard_statements <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String")))
+    hazard_statements <- hazard_statements[hazard_statements != ""]
+    hazard_codes <- str_extract(hazard_statements, "^H\\d{3}(\\s?\\*|[A-z]{0,2})(\\+H\\d{3}[A-z]{0,2})*")
+    hazard_codes <- sort(unique(hazard_codes[hazard_codes != ""]))
+
+    prec_codes <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'Precautionary Statement Codes')]//StringWithMarkup/String") ))
+    prec_codes <- unlist(str_extract_all(prec_codes, "P\\d{3}(\\+P\\d{3})*"))
+
+    # build output list(s)
+
+    out[[length(out) + 1]] <-  list(
+      source_name = source_name,
+      substance = source_substancename,
+      hazard_codes = hazard_codes,
+      hazard_statements = hazard_statements,
+      precautionary_statement_codes = prec_codes,
+      source_desc = source_description,
+      url = source_url,
+      license = source_license
+      )
+  }
+    return(out)
+}
 
 
 # ToDo: variable/list with sources to extract: named specificaly (returning empty when not available)

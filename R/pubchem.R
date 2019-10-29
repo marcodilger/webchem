@@ -143,7 +143,7 @@ pc_prop <- function(cid, properties = NULL, verbose = TRUE, ...){
   qurl <- paste0(prolog, input, output)
   if (verbose)
     message(qurl)
-  Sys.sleep(0.2)
+  Sys.sleep(0.2) # pubchem asks to limit requests to 5/sec
   cont <- try(content(POST(qurl,
                            body = list("cid" = paste(cid, collapse = ',')
                                        )),
@@ -232,7 +232,7 @@ pc_synonyms <- function(query, from = 'name', choices = NULL, verbose = TRUE, ar
     qurl <- paste0(prolog, input, output, arg)
     if (verbose)
       message(qurl)
-    Sys.sleep(0.2)
+    Sys.sleep(0.2) # pubchem asks to limit requests to 5/sec
     cont <- try(content(POST(qurl,
                              body = paste0(from, '=', query)
     )), silent = TRUE
