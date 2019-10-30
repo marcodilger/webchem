@@ -1,5 +1,4 @@
 library(httr)
-library(jsonlite)
 library(xml2)
 library(stringr)
 
@@ -16,7 +15,7 @@ library(stringr)
 # )
 #
 # saveRDS(cont, "data/content_ghs_temp.rda")
-cont <- readRDS("data/content_ghs_temp.rda")
+#cont <- readRDS("data/content_ghs_temp.rda")
 
 ghs_xml <- xml_ns_strip(read_xml(cont))
 
@@ -67,11 +66,11 @@ for(ref in ghs_refs) {
   # build output list(s)
 
   out[[length(response) + 1]] <-  list(
-    source_name = source_name,
     substance = source_substancename,
     hazard_codes = hazard_codes,
     hazard_statements = hazard_statements,
     precautionary_statement_codes = prec_codes,
+    source_name = source_name,
     source_desc = source_description,
     url = source_url,
     license = source_license)
@@ -90,9 +89,48 @@ out[1]
 cid <- 6341
 verbose = TRUE
 
-# ToDo roxygen documentation
 
-pc_ghs <- function(cid, sources = "all", verbose = TRUE){
+#' Retrieve GHS classification from a pubchem CID
+#'
+#' Retrieve available information on GHS classification of compound from Pubchem CID, see \url{https://pubchem.ncbi.nlm.nih.gov/}
+#' @import httr xml2 stringr
+#'
+#' @param cid character; Pubchem ID (CID).
+#' @param sources character vector; sources of GHS information to return,
+#'                for now only accepts "all" for all available sources.
+#'                Available sources vary depending on the substance.
+#' @param verbose logical; should a verbose output be printed to the console?
+#'
+#' @md
+#' @return a list of lists, one list for each source, with the elements:
+#'  * substance character; name of the substance according to the current source.
+#'  * hazard_codes character vector; hazard statement codes ("H Codes").
+#'  * hazard_statements character vector; hazard statement sentences ("H Phrases").
+#'  * precautionary_statement_codes character vector; precautionary statement codes ("P Codes").
+#'  * source_name character; name of the source.
+#'  * source_desc character; description of the source.
+#'  * url character; URL of the source.
+#   * license character; license of the source. Returns an empty character vector for many sources.
+#' @author Marco Dilger, \email{marco.dilger@@gmail.com}
+#' @seealso \code{\link{get_cid}} to retrieve Pubchem IDs.
+#' @references Wang, Y., J. Xiao, T. O. Suzek, et al. 2009 PubChem: A Public Information System for
+#' Analyzing Bioactivities of Small Molecules. Nucleic Acids Research 37: 623–633.
+#'
+#' Kim, Sunghwan, Paul A. Thiessen, Evan E. Bolton, et al. 2016
+#' PubChem Substance and Compound Databases. Nucleic Acids Research 44(D1): D1202–D1213.
+#'
+#' Kim, S., Thiessen, P. A., Bolton, E. E., & Bryant, S. H. (2015).
+#' PUG-SOAP and PUG-REST: web services for programmatic access to chemical information in PubChem. Nucleic acids research, gkv396.
+#'
+#' @export
+#' @examples
+#' \donttest{
+#' # might fail if API is not available
+#' pc_ghs(8148)
+#' }
+pc_ghs <- function(cid,
+                   sources = "all",
+                   verbose = TRUE){
   # cid: for now only a single cid, ToDo: implementation of multiple cid like in other pc_ functions
   # sources: for now only "all", which returns a list of lists from all available sources containing GHS information
 
@@ -146,11 +184,11 @@ pc_ghs <- function(cid, sources = "all", verbose = TRUE){
     # build output list(s)
 
     out[[length(out) + 1]] <-  list(
-      source_name = source_name,
       substance = source_substancename,
       hazard_codes = hazard_codes,
       hazard_statements = hazard_statements,
       precautionary_statement_codes = prec_codes,
+      source_name = source_name,
       source_desc = source_description,
       url = source_url,
       license = source_license
