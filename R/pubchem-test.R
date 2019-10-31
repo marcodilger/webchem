@@ -7,13 +7,13 @@ library(stringr)
 # pug view via JSON would work, but quite complicated to reach the right nodes
 # try with xml response
 
-# classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/6341/XML?heading=GHS+Classification"
-#
-# cont <- try(content(POST(classification_query),
-#                     type = 'text', encoding = 'UTF-8'),
-#             silent = TRUE
-# )
-#
+classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/634199/XML?heading=GHS+Classification"
+
+cont <- try(content(POST(classification_query),
+                    type = 'text', encoding = 'UTF-8'),
+            silent = TRUE
+)
+
 # saveRDS(cont, "data/content_ghs_temp.rda")
 #cont <- readRDS("data/content_ghs_temp.rda")
 
@@ -151,8 +151,11 @@ pc_ghs <- function(cid,
     warning('Problem with web service encountered... Returning NA.')
     return(NA)
   }
-  # ToDo: fault handling
-
+  # fault handling (e.g. non existant CID)
+  if (length(xml_find_all(ghs_xml, xpath = "/Fault")) != 0) {
+    warning(xml_text(xml_find_all(ghs_xml, xpath = '/Fault/Message')), ". Returning NA.")
+    return(NA)
+  }
   # extract relevant xml
   ghs_xml <- xml_ns_strip(read_xml(cont))
 
