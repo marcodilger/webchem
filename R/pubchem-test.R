@@ -90,44 +90,7 @@ cid <- 6341
 verbose = TRUE
 
 
-#' Retrieve GHS classification from a pubchem CID
-#'
-#' Retrieve available information on GHS classification of compound from Pubchem CID, see \url{https://pubchem.ncbi.nlm.nih.gov/}
-#' @import httr xml2 stringr
-#'
-#' @param cid character; Pubchem ID (CID).
-#' @param sources character vector; sources of GHS information to return,
-#'                for now only accepts "all" for all available sources.
-#'                Available sources vary depending on the substance.
-#' @param verbose logical; should a verbose output be printed to the console?
-#'
-#' @return a list of lists, one list for each source, with the elements:
-#' \item{name a}{description a}
-#' \item{substance} {character; name of the substance according to the current source.}
-#' \item{hazard_codes} {character vector; hazard statement codes ("H Codes").}
-#' \item{hazard_statements} {character vector; hazard statement sentences ("H Phrases").}
-#' \item{precautionary_statement_codes} {character vector; precautionary statement codes ("P Codes").}
-#' \item{source_name} {character; name of the source.}
-#' \item{source_desc} {character; description of the source.}
-#' \item{url} {character; URL of the source.}
-#' \item{license} {character; license of the source. Returns an empty character vector for many sources.}
-#' @author Marco Dilger, \email{marco.dilger@@gmail.com}
-#' @seealso \code{\link{get_cid}} to retrieve Pubchem IDs.
-#' @references Wang, Y., J. Xiao, T. O. Suzek, et al. 2009 PubChem: A Public Information System for
-#' Analyzing Bioactivities of Small Molecules. Nucleic Acids Research 37: 623–633.
-#'
-#' Kim, Sunghwan, Paul A. Thiessen, Evan E. Bolton, et al. 2016
-#' PubChem Substance and Compound Databases. Nucleic Acids Research 44(D1): D1202–D1213.
-#'
-#' Kim, S., Thiessen, P. A., Bolton, E. E., & Bryant, S. H. (2015).
-#' PUG-SOAP and PUG-REST: web services for programmatic access to chemical information in PubChem. Nucleic acids research, gkv396.
-#'
-#' @export
-#' @examples
-#' \donttest{
-#' # might fail if API is not available
-#' pc_ghs(8148)
-#' }
+
 pc_ghs <- function(cid,
                    sources = "all",
                    verbose = TRUE){
@@ -176,7 +139,7 @@ pc_ghs <- function(cid,
 
     hazard_statements <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String")))
     hazard_statements <- hazard_statements[hazard_statements != ""]
-    hazard_codes <- str_extract(hazard_statements, "^H\\d{3}(\\s?\\*|[A-z]{0,2})(\\+H\\d{3}[A-z]{0,2})*")
+    hazard_codes <- str_extract(hazard_statements, "^H\\d{3}[A-z]{0,2}(\\+H\\d{3}[A-z]{0,2})*")
     hazard_codes <- sort(unique(hazard_codes[hazard_codes != ""]))
 
     prec_codes <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'Precautionary Statement Codes')]//StringWithMarkup/String") ))
@@ -203,11 +166,4 @@ pc_ghs <- function(cid,
 # or option 'all' for all available
   # needed for this: explicit list of names which can occur as sources
 
-
-
-# entweder es wird an der Stelle dann allgemein gehalten,
-# oder: Fallunterscheidung je nach Quelle (ECHA, NITE-CMC, HCIS)
-# Liste mit allenauftretenden Sources?
-
-# todo: add roxygen documentation
-# https://github.com/r-lib/roxygen2#roxygen2
+#ToDo: add support for multipe CIDs: in the outer list, each element is the response from one CID

@@ -264,22 +264,21 @@ pc_synonyms <- function(query, from = 'name', choices = NULL, verbose = TRUE, ar
 #' Retrieve available information on GHS classification of compound from Pubchem CID, see \url{https://pubchem.ncbi.nlm.nih.gov/}
 #' @import httr xml2 stringr
 #'
-#' @param cid character; Pubchem ID (CID).
-#' @param sources character vector; sources of GHS information to return,
+#' @param cid (character); Pubchem ID (CID).
+#' @param sources (character vector) sources of GHS information to return,
 #'                for now only accepts "all" for all available sources.
 #'                Available sources vary depending on the substance.
-#' @param verbose logical; should a verbose output be printed to the console?
+#' @param verbose (logical) should a verbose output be printed to the console?
 #'
 #' @return a list of lists, one list for each source, with the elements:
-#' \item{name a}{description a}
-#' \item{substance} {character; name of the substance according to the current source.}
-#' \item{hazard_codes} {character vector; hazard statement codes ("H Codes").}
-#' \item{hazard_statements} {character vector; hazard statement sentences ("H Phrases").}
-#' \item{precautionary_statement_codes} {character vector; precautionary statement codes ("P Codes").}
-#' \item{source_name} {character; name of the source.}
-#' \item{source_desc} {character; description of the source.}
-#' \item{url} {character; URL of the source.}
-#' \item{license} {character; license of the source. Returns an empty character vector for many sources.}
+#' \item{substance}{(character); name of the substance according to the current source.}
+#' \item{hazard_codes}{(character vector) hazard statement codes ("H Codes").}
+#' \item{hazard_statements}{(character vector) hazard statement sentences ("H Phrases").}
+#' \item{precautionary_statement_codes}{(character vector) precautionary statement codes ("P Codes").}
+#' \item{source_name}{(character) name of the source.}
+#' \item{source_desc}{(character) description of the source.}
+#' \item{url}{(character) URL of the source.}
+#' \item{license}{(character) license of the source. Returns an empty character vector for many sources.}
 #' @author Marco Dilger, \email{marco.dilger@@gmail.com}
 #' @seealso \code{\link{get_cid}} to retrieve Pubchem IDs.
 #' @references Wang, Y., J. Xiao, T. O. Suzek, et al. 2009 PubChem: A Public Information System for
@@ -345,7 +344,7 @@ pc_ghs <- function(cid,
 
     hazard_statements <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String")))
     hazard_statements <- hazard_statements[hazard_statements != ""]
-    hazard_codes <- str_extract(hazard_statements, "^H\\d{3}(\\s?\\*|[A-z]{0,2})(\\+H\\d{3}[A-z]{0,2})*")
+    hazard_codes <- str_extract(hazard_statements, "^H\\d{3}[A-z]{0,2}(\\+H\\d{3}[A-z]{0,2})*")
     hazard_codes <- sort(unique(hazard_codes[hazard_codes != ""]))
 
     prec_codes <- xml_text(xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'Precautionary Statement Codes')]//StringWithMarkup/String") ))
