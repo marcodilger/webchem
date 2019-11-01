@@ -270,16 +270,16 @@ pc_synonyms <- function(query, from = 'name', choices = NULL, verbose = TRUE, ar
 #'                Available sources vary depending on the substance.
 #' @param verbose logical; should a verbose output be printed to the console?
 #'
-#' @md
 #' @return a list of lists, one list for each source, with the elements:
-#'  * substance character; name of the substance according to the current source.
-#'  * hazard_codes character vector; hazard statement codes ("H Codes").
-#'  * hazard_statements character vector; hazard statement sentences ("H Phrases").
-#'  * precautionary_statement_codes character vector; precautionary statement codes ("P Codes").
-#'  * source_name character; name of the source.
-#'  * source_desc character; description of the source.
-#'  * url character; URL of the source.
-#   * license character; license of the source. Returns an empty character vector for many sources.
+#' \item{name a}{description a}
+#' \item{substance} {character; name of the substance according to the current source.}
+#' \item{hazard_codes} {character vector; hazard statement codes ("H Codes").}
+#' \item{hazard_statements} {character vector; hazard statement sentences ("H Phrases").}
+#' \item{precautionary_statement_codes} {character vector; precautionary statement codes ("P Codes").}
+#' \item{source_name} {character; name of the source.}
+#' \item{source_desc} {character; description of the source.}
+#' \item{url} {character; URL of the source.}
+#' \item{license} {character; license of the source. Returns an empty character vector for many sources.}
 #' @author Marco Dilger, \email{marco.dilger@@gmail.com}
 #' @seealso \code{\link{get_cid}} to retrieve Pubchem IDs.
 #' @references Wang, Y., J. Xiao, T. O. Suzek, et al. 2009 PubChem: A Public Information System for
@@ -320,19 +320,20 @@ pc_ghs <- function(cid,
     warning('Problem with web service encountered... Returning NA.')
     return(NA)
   }
-  # ToDo: fault handling
+  # fault handling (e.g. non existant CID)
+  if (length(xml_find_all(ghs_xml, xpath = "/Fault")) != 0) {
+    warning(xml_text(xml_find_all(ghs_xml, xpath = '/Fault/Message')), ". Returning NA.")
+    return(NA)
+  }
 
   # extract relevant xml
   ghs_xml <- xml_ns_strip(read_xml(cont))
-
-
   # extract all available references containing GHS hazard statements
   # returned reference ID are not consistent accross substance, reference ID is not suitable as identifier of sources
   ghs_refs <- xml_text(xml_find_all(ghs_xml, xpath = "//Information[Name][contains(., 'GHS Hazard Statements')]//ReferenceNumber"))
 
   out <-  list()
   for(ref in ghs_refs) {
-
     source <- xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]"))
     source_name <- xml_text(xml_find_all(source, xpath = "SourceName"))
     source_substancename <- xml_text(xml_find_all(source, xpath = "Name"))
