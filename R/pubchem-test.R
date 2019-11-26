@@ -7,12 +7,12 @@ library(stringr)
 # pug view via JSON would work, but quite complicated to reach the right nodes
 # try with xml response
 
-classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/6341/XML?heading=GHS+Classification"
-#
-# cont <- try(content(POST(classification_query),
-#                     type = 'text', encoding = 'UTF-8'),
-#             silent = TRUE
-# )
+classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/712/XML?heading=GHS+Classification"
+
+cont <- try(content(POST(classification_query),
+                    type = 'text', encoding = 'UTF-8'),
+            silent = TRUE
+)
 
 #saveRDS(cont, "data/content_ghs_temp.rda") # temp, for offline testing
 cont <- readRDS("data/content_ghs_temp.rda")
@@ -29,9 +29,10 @@ ghs_xml <- xml_ns_strip(read_xml(cont))
 ghs_refs <- xml_text(xml_find_all(ghs_xml, xpath = "//Information[Name][contains(., 'GHS Hazard Statements')]//ReferenceNumber"))
 # note: returned reference ID are not consistent accross substance, reference ID is not suitable as identifier of sources
 
-# make named vector of the references, names to be used for selection
-# ToDo: this probably fails when a ref appears >1 time, probably happens
-names(ghs_refs) <- sapply(ghs_refs, function(ref) xml_text(xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]//SourceName"))))
+# make named vector of the references, names are the id, values to be used for selection
+# ToDo: this probably fails when a ref appears >1 time, probably happens <-  yep, refactor
+names(ghs_refs) <- ghs_refs
+ghs_refs <- sapply(ghs_refs, function(ref) xml_text(xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]//SourceName"))))
 
 
 
@@ -52,12 +53,12 @@ selected_refs <- NULL
 
 # build response list for each reference, sequentially
 if (any(str_detect(ref_selection, "ECHA"))) { # ToDo verbessern
-   response <- ghs_refs[str_detect(names(ghs_refs), "European Chemicals Agency")] # precise string that needs to be present
+   response <- ghs_refs[str_detect(ghs_refs, "European Chemicals Agency")] # precise string that needs to be present
    selected_refs <- c(selected_refs, response)
 }
 
 if (any(str_detect(ref_selection, "CLP"))) { # ToDo verbessern
-  response <- ghs_refs[str_detect(names(ghs_refs), "EU REGULATION \\(EC\\) No 1272/2008")] # precise string that needs to be present
+  response <- ghs_refs[str_detect(ghs_refs, "EU REGULATION \\(EC\\) No 1272/2008")] # precise string that needs to be present
   selected_refs <- c(selected_refs, response)
 }
 
@@ -90,7 +91,7 @@ get_ref_ids <- function(refs_available, ref_selected) { # gets a named vector of
 
 
 out <-  list()
-for(ref in ghs_refs) {
+for(ref in names(ghs_refs)) {
 
   source <- xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]"))
   source_name <- xml_text(xml_find_all(source, xpath = "SourceName"))
