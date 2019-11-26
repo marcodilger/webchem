@@ -30,7 +30,7 @@ ghs_refs <- xml_text(xml_find_all(ghs_xml, xpath = "//Information[Name][contains
 # note: returned reference ID are not consistent accross substance, reference ID is not suitable as identifier of sources
 
 # make named vector of the references, names are the id, values to be used for selection
-# ToDo: this probably fails when a ref appears >1 time, probably happens <-  yep, refactor
+# (yet to be implemnted to work this way in the function)
 names(ghs_refs) <- ghs_refs
 ghs_refs <- sapply(ghs_refs, function(ref) xml_text(xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]//SourceName"))))
 
@@ -49,25 +49,13 @@ ref_selection <- c("ECHA", "CLP")
 # ja, am besten hier schon die liste uafbauen, obwohl angangs mit absicht dagegen entshcieden:
 # named list element, mit name = id, mit jeweils eintrag  $ source_name wie unten. dnn diese Liste filtern
 
-selected_refs <- NULL
-
-# build response list for each reference, sequentially
-if (any(str_detect(ref_selection, "ECHA"))) { # ToDo verbessern
-   response <- ghs_refs[str_detect(ghs_refs, "European Chemicals Agency")] # precise string that needs to be present
-   selected_refs <- c(selected_refs, response)
-}
-
-if (any(str_detect(ref_selection, "CLP"))) { # ToDo verbessern
-  response <- ghs_refs[str_detect(ghs_refs, "EU REGULATION \\(EC\\) No 1272/2008")] # precise string that needs to be present
-  selected_refs <- c(selected_refs, response)
-}
-
-selected_refs
-
-get_ref_ids <- function(refs_available, ref_selected) { # gets a named vector of available reference IDs, a reference ID to be searched,
-                            # returns the ID of the reference, if included
 
 
+get_ref_ids <- function(refs_available, ref_selected) { # gets a named vector of available reference IDs, with the string description in the value and the numeric id as names; a reference ID to be searched,
+                            # returns the ID(s) of the reference, if included
+
+# refs_available entspricht ghs_refs
+# ref_selected entspricht z.B. "ECHA"
 
 # temporary: df for lookup reference-detectionstring,
 #  needs to be outside of fct
@@ -76,13 +64,24 @@ get_ref_ids <- function(refs_available, ref_selected) { # gets a named vector of
     "European Chemicals Agency", # string to look for, for "ECHA"
     "EU REGULATION \\(EC\\) No 1272/2008" # string to look for, for "CLP"
   )
-  names(searchstring) <- ref_selection
+  names(searchstring) <- c(
+    "ECHA",
+    "CLP"
+  )
 
-  # for now with a loop
+  # for now with a loop # ToDo: continue here
+  returned_ids <- NULL
   for (i in seq_along(searchstring)) {
+    if (any(str_detect(ref_selected, names(searchstring[i])))) { # geht so auc für vektor ref_selection, statt string ref_secetion
+      response <- refs_available[str_detect(refs_available, searchstring[i])] # precise string that needs to be present
+      returned_ids <- c(returned_ids, response)
+    }
 
   }
+  return(returned_ids)
 }
+
+get_ref_ids(ghs_refs, ref_selected = c("CLP", "ECHA"))
 
 # lookup tables using named vectors
 # https://www.infoworld.com/article/3323006/do-more-with-r-quick-lookup-tables-using-named-vectors.html
