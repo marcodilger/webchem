@@ -294,7 +294,7 @@ pc_synonyms <- function(query, from = 'name', choices = NULL, verbose = TRUE, ar
 #' @examples
 #' \donttest{
 #' # might fail if API is not available
-#' pc_ghs(8148)
+#' pc_ghs(8148, souces = "all)
 #' }
 pc_ghs <- function(cid,
                    sources = "all",

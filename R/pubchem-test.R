@@ -7,15 +7,15 @@ library(stringr)
 # pug view via JSON would work, but quite complicated to reach the right nodes
 # try with xml response
 
-classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/634199/XML?heading=GHS+Classification"
+classification_query <- "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/6341/XML?heading=GHS+Classification"
+#
+# cont <- try(content(POST(classification_query),
+#                     type = 'text', encoding = 'UTF-8'),
+#             silent = TRUE
+# )
 
-cont <- try(content(POST(classification_query),
-                    type = 'text', encoding = 'UTF-8'),
-            silent = TRUE
-)
-
-# saveRDS(cont, "data/content_ghs_temp.rda")
-#cont <- readRDS("data/content_ghs_temp.rda")
+#saveRDS(cont, "data/content_ghs_temp.rda") # temp, for offline testing
+cont <- readRDS("data/content_ghs_temp.rda")
 
 ghs_xml <- xml_ns_strip(read_xml(cont))
 
@@ -29,20 +29,66 @@ ghs_xml <- xml_ns_strip(read_xml(cont))
 ghs_refs <- xml_text(xml_find_all(ghs_xml, xpath = "//Information[Name][contains(., 'GHS Hazard Statements')]//ReferenceNumber"))
 # note: returned reference ID are not consistent accross substance, reference ID is not suitable as identifier of sources
 
-# access hazard statements of referencenumbers directly
-#response <- xml_find_all(ghs_xml, xpath = "//Information[ReferenceNumber[text()='52']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String") # <- works
-#xml_text(response)
+# make named vector of the references, names to be used for selection
+# ToDo: this probably fails when a ref appears >1 time, probably happens
+names(ghs_refs) <- sapply(ghs_refs, function(ref) xml_text(xml_find_all(ghs_xml, xpath = paste0("Reference[ReferenceNumber[text()='", ref, "']]//SourceName"))))
 
-# dynamically get GHS statements
-for (ref in ghs_refs) {
-  print(ref)
-  response <- xml_find_all(ghs_xml, xpath = paste0("//Information[ReferenceNumber[text()='", ref, "']][Name][contains(., 'GHS Hazard Statements')]//StringWithMarkup/String") )
-  print(response)
+
+
+# select references
+ref_selection <- c("ECHA", "CLP")
+
+# example without function
+# probably best solution; create a list of available references, already
+# compatible with the final repsonse list
+# then use an additional list element serving as a flag if it is to be included
+# and at the end remove any references not to be included
+# then use this list as frame for the final return/repsonse list
+
+# ja, am besten hier schon die liste uafbauen, obwohl angangs mit absicht dagegen entshcieden:
+# named list element, mit name = id, mit jeweils eintrag  $ source_name wie unten. dnn diese Liste filtern
+
+selected_refs <- NULL
+
+# build response list for each reference, sequentially
+if (any(str_detect(ref_selection, "ECHA"))) { # ToDo verbessern
+   response <- ghs_refs[str_detect(names(ghs_refs), "European Chemicals Agency")] # precise string that needs to be present
+   selected_refs <- c(selected_refs, response)
 }
 
+if (any(str_detect(ref_selection, "CLP"))) { # ToDo verbessern
+  response <- ghs_refs[str_detect(names(ghs_refs), "EU REGULATION \\(EC\\) No 1272/2008")] # precise string that needs to be present
+  selected_refs <- c(selected_refs, response)
+}
 
-# build response list for each reference
-ref <- 11
+selected_refs
+
+get_ref_ids <- function(refs_available, ref_selected) { # gets a named vector of available reference IDs, a reference ID to be searched,
+                            # returns the ID of the reference, if included
+
+
+
+# temporary: df for lookup reference-detectionstring,
+#  needs to be outside of fct
+
+  searchstring <- c(
+    "European Chemicals Agency", # string to look for, for "ECHA"
+    "EU REGULATION \\(EC\\) No 1272/2008" # string to look for, for "CLP"
+  )
+  names(searchstring) <- ref_selection
+
+  # for now with a loop
+  for (i in seq_along(searchstring)) {
+
+  }
+}
+
+# lookup tables using named vectors
+# https://www.infoworld.com/article/3323006/do-more-with-r-quick-lookup-tables-using-named-vectors.html
+
+
+
+
 out <-  list()
 for(ref in ghs_refs) {
 
@@ -78,8 +124,6 @@ for(ref in ghs_refs) {
 
 }
 
-
-out[1]
 
 
 
@@ -161,6 +205,8 @@ pc_ghs <- function(cid,
     return(out)
 }
 
+pc_ghs(cid)
+final_response_list <- pc_ghs(cid)
 
 # ToDo: variable/list with sources to extract: named specificaly (returning empty when not available)
 # or option 'all' for all available
